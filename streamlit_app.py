@@ -4,6 +4,9 @@ import altair as alt
 import matplotlib.pyplot as plt
 import datetime
 
+import plotly.express as px
+from streamlit_plotly_events import plotly_events
+
 st.set_page_config(layout="centered", page_icon="🚲", page_title="Bike Rental")
 
 st.write('# Bike Rental')
@@ -47,36 +50,131 @@ with col2:
 #                         .agg({'casual':'mean','registered':'mean'})
 #                         .astype('int')))
 
-# st.write(df_test)
-
 # st.area_chart(df_test)
+
+def relative_number(row):
+    if row.client_type == 'registered':
+        return row.number
+    else :
+        return -row.number
 
 df_monthly_mean = (pd.DataFrame(df.groupby(['first_day_of_month'])
         .agg({'casual':'mean','registered':'mean'})
         .astype('int').stack())
         .reset_index()
-        .rename(columns={'level_0':'month','level_1':'client_type',0:'number'})
+        .rename(columns={'level_1':'client_type',0:'number'})
         )
 
-base_1 = alt.Chart(df_monthly_mean)
+df_monthly_mean['relative_number'] = df_monthly_mean.apply(relative_number,axis=1)
+df_monthly_mean['month_year'] = df_monthly_mean['first_day_of_month'].apply(lambda x: x.strftime('%B %Y')) 
 
-area_1 = base_1.mark_area(opacity=0.3).encode(
-            x=alt.X('first_day_of_month:T',title='Month'),
-            y=alt.Y("number:Q", title='Number of bikes rent', stack=None),
-            tooltip=['number'],
-            color="client_type:N"
-        ).properties(width=800,
-                    height=300
-                    )
+# st.write(df_monthly_mean)
+
+fig = px.area(df_monthly_mean, 
+              x = "first_day_of_month", 
+              y = "relative_number", 
+              color = "client_type",
+              custom_data = ['number','month_year'],
+              # color_discrete_map = {"registered": "yellow", "casual": "blue"},
+              )
+
+fig.add_hline(y=0, line_color='white') 
+fig.add_vline(x=datetime.date(chosen_year, dico_month_indx[chosen_month], 1), 
+              line_color='red')      
+
+fig.update_traces(hovertemplate = '%{customdata[1]} <br> Bikes rent: %{customdata[0]}')
+
+fig.update_layout(
+    yaxis=dict(
+        title_text = "Number of bikes rent",
+        tickmode='array',
+        tickvals=[-50, 0, 50, 100, 150, 200, 250],
+        ticktext=[ 50, 0, 50, 100, 150, 200, 250]
+    ),
+    xaxis = dict(
+        title_text = "Month and year"
+    ),
+    legend_title_text = 'Client type',
+)
 
 
-xrule_1 = base_1.mark_rule(color="red", 
-                              strokeWidth=2, 
-                              fill='red', 
-                              stroke='red'
-                              ).encode(x=alt.datum(alt.DateTime(month=chosen_month,year=chosen_year)))
+# st.plotly_chart(fig, use_container_width=True)
 
-st.altair_chart(area_1 + xrule_1, use_container_width=True)
+selected_points = plotly_events(fig, click_event=True, hover_event=False, select_event=False)
+
+date = ''
+for element in selected_points:
+    date = element["x"]
+
+try :
+    year = int(date[:4])
+    month = int(date[5:7])
+except:
+    year = 2011
+    month = 1
+
+df_year_month = df[(df.year==year) & (df.month==month)]
+
+
+
+# import plotly.graph_objects as go
+  
+# df_monthly_mean_casual = df_monthly_mean[df_monthly_mean.client_type=='casual']
+# df_monthly_mean_registered = df_monthly_mean[df_monthly_mean.client_type=='registered']
+
+# fig2 = go.Figure()
+
+# fig2.add_trace(go.Scatter(
+#      x= df_monthly_mean[df_monthly_mean.client_type=='casual']['first_day_of_month'], 
+#      y = - df_monthly_mean[df_monthly_mean.client_type=='casual']['number'],
+#      name = 'Casual',
+#      mode = 'lines',
+#      line=dict(width=0.5, color='orange'),
+#      stackgroup = 'one'
+#      )
+# )
+
+# fig2.add_trace(go.Scatter(
+#      x= df_monthly_mean[df_monthly_mean.client_type=='registered']['first_day_of_month'], 
+#      y = df_monthly_mean[df_monthly_mean.client_type=='registered']['number'],
+#      name = 'Registered',
+#      mode = 'lines',
+#      line=dict(width=0.5,color='lightgreen'),
+#      stackgroup = 'two'))
+
+# fig2.update_layout(
+#     yaxis=dict(
+#         title_text = "Number of bikes rent",
+#         tickmode='array',
+#         tickvals=[-50, 0, 50, 100, 150, 200, 250],
+#         ticktext=[50, 0, 50, 100, 150, 200, 250]
+#     )
+# )
+
+# st.plotly_chart(fig2,use_container_width=True)
+
+
+
+
+# base_1 = alt.Chart(df_monthly_mean)
+
+# area_1 = base_1.mark_area(opacity=0.3).encode(
+#             x=alt.X('first_day_of_month:T',title='Month'),
+#             y=alt.Y("number:Q", title='Number of bikes rent', stack='center'),
+#             tooltip=['number'],
+#             color="client_type:N"
+#         ).properties(width=800,
+#                     height=300
+#                     )
+
+
+# xrule_1 = base_1.mark_rule(color="red", 
+#                               strokeWidth=2, 
+#                               fill='red', 
+#                               stroke='red'
+#                               ).encode(x=alt.datum(alt.DateTime(month=chosen_month,year=chosen_year)))
+
+# st.altair_chart(area_1 + xrule_1, use_container_width=True)
 
 #############################
 
@@ -258,13 +356,13 @@ base_2 = alt.Chart(df_preprocessed(df_filtered)
 
 graph_2 = base_2.mark_line(point = False).encode(
                 x = alt.X("hour:O", title="Hour of day"),
-                y = alt.Y("round_number:Q",title="Number of bikes rent"),
+                y = alt.Y("round_number:Q", title="Number of bikes rent", scale = alt.Scale(domain=[0,650])),
                 color = alt.Color("client_type:N",title='Client Type'),
                 tooltip = alt.Tooltip("round_number:Q", title="Number of bikes rent")
             ).properties(
                 title="Average number of bikes rent hourly in "+chosen_month+' '+str(chosen_year)+complementary_information,
-                width=600,
-                height=300,
+                width=700,
+                height=600,
             )
 
 hover = alt.selection_single(
@@ -289,6 +387,7 @@ tooltips = (base_2
 
 st.altair_chart(graph_2+tooltips,use_container_width=True)
 
+
 #################
 
 import base64
@@ -301,7 +400,9 @@ file.close()
 conditions = ' and under those conditions!' if chosen_display[0] == 'Y' else '.'
 total_bikes_per_hour = int(df_filtered['count'].sum() / len(df_filtered))
 st.write(f'There is an average of {total_bikes_per_hour} bikes rent at this station per hour over this month'+conditions)
-nb_bikes_to_display = min(total_bikes_per_hour // 50 + 1 , 4)
+nb_bikes_to_display = min(total_bikes_per_hour // 70 + 1 , 4)
+
+st.write('The more people rent bikes, the more bikers are displayed!')
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -332,7 +433,6 @@ with col4:
             f'<img src="data:image/gif;base64,{data_url}" alt="cat gif">',
             unsafe_allow_html=True,
         )
-
 
 ####################################
 
