@@ -233,22 +233,23 @@ if chosen_display[0] == 'Y' :
                                     min_value=int(df.temp.min()),
                                     max_value=int(df.temp.max()),
                                     step=1,
-                                    value = (q1_temperature, q3_temperature),
+                                    value = (int(q1_temperature), int(q3_temperature)),
                                     )
                    
 
     with col3 : 
         humidity_down, humidity_up = st.slider(label='Humidity',
-                                    min_value=df.humidity.min(),
-                                    max_value=df.humidity.max(),
-                                    value = (q1_humidity, q3_humidity)
+                                    min_value= int(df.humidity.min()),
+                                    max_value= int(df.humidity.max()),
+                                    value = (int(q1_humidity), int(q3_humidity)),
+                                    step=1
                                     )
 
     with col4 : 
         windspeed_down, windspeed_up = st.slider(label='Windspeed',
                                     min_value=int(df.windspeed.min()),
                                     max_value=int(df.windspeed.max()),
-                                    value=(q1_windspeed, q3_windspeed),
+                                    value=(int(q1_windspeed), int(q3_windspeed)),
                                     step = 1,
                                     )                                   
 
