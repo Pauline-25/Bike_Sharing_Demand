@@ -5,15 +5,33 @@ import matplotlib.pyplot as plt
 import datetime
 
 import plotly.express as px
+import plotly.graph_objects as go
 from streamlit_plotly_events import plotly_events
 
 st.set_page_config(layout="centered", page_icon="🚲", page_title="Bike Rental")
+showWarningOnDirectExecution = False
 
 st.write('# Bike Rental')
 
+st.write('Our dataset is about bike sharing. For each hour of 2011 and 2012, we have the total number of bikes rent at one specific station, by registered and non-registered clients. We also have peripheric information about the type of day and the weather.') 
+st.write('This dataset addresses a concrete issue of our daily lives, which makes it very interesting to visualize! Don\'t forget that bike is one of the most ecological mean of transport and is going to be more and more frequent in our cities in the future. Since it is time-based, you will understand the evolution of bike demand, peak and off hours, etc.')
+st.write('Happy visualizing!')
+
 st.write('## Average bike rental over two years')
 
+st.write('First of all, let\'s have a global overview of, on average, how much bikes have been rent at the station at each month.')
+st.write('You can already select the month we\'ll explore in part 2!')
 # @st.cache decorator skip reloading the code when the apps rerun.
+
+dico_indx_weekday = {0:'Monday', 1:'Tuesday', 2:'Wednesday', 3:'Thursday', 4:'Friday', 5:'Saturday', 6:'Sunday'}
+list_months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+dico_indx_month = {i:m for i,m in zip(list(range(1,13)),list_months)}
+dico_month_indx = {m:i for i,m in zip(list(range(1,13)),list_months)}
+
+dico_weather = {1:"☀️",2:"☁️",3:"🌧️",4:"⛈️"}
+dico_weather_ = {"☀️":1,"☁️":2,"🌧️":3,"⛈️":4}
+dico_working_day = {"Scholar period 🖊️":0, "Holiday 🏖️":1}
+dico_weekend = {"Weekday 💼":0, "Weekend 🥳":1}
 
 df = pd.read_csv('bike.csv')
 df.datetime = pd.to_datetime(df.datetime)
@@ -21,15 +39,8 @@ df['month'] = df.datetime.dt.month
 df['hour'] = df.datetime.dt.hour
 df['year'] = df.datetime.dt.year
 df['first_day_of_month'] = df.datetime.apply(lambda date : datetime.date(date.year, date.month, 1))
+df['weekday'] = df.datetime.apply(lambda x : dico_indx_weekday[x.weekday()])
 
-list_months = ['January','February','March','April','May','June','July','August','September','October','November','December']
-dico_indx_month = {i:m for i,m in zip(list(range(1,13)),list_months)}
-dico_month_indx = {m:i for i,m in zip(list(range(1,13)),list_months)}
-
-dico_weather = {1:"☀️",2:"☁️",3:"🌧️",4:"⛈️"}
-dico_weather_ = {"☀️":1,"☁️":2,"🌧️":3,"⛈️":4}
-dico_working_day = {"Scholar period 🖊️":0,"Holiday 🏖️":1}
-dico_weekend = {"Weekday 💼":0 ,"Weekend 🥳":1 }
 
 #######
 
@@ -37,7 +48,7 @@ col1, col2 = st.columns([4,1])
 
 with col1:
     chosen_month = st.select_slider(
-        'Select month to display average bike rental',
+        'Select month to display average bike rental in part 2',
         options = list_months
         )
 
@@ -70,21 +81,22 @@ df_monthly_mean['month_year'] = df_monthly_mean['first_day_of_month'].apply(lamb
 
 # st.write(df_monthly_mean)
 
-fig = px.area(df_monthly_mean, 
+fig1 = px.area(df_monthly_mean, 
               x = "first_day_of_month", 
               y = "relative_number", 
               color = "client_type",
               custom_data = ['number','month_year'],
               # color_discrete_map = {"registered": "yellow", "casual": "blue"},
+              title = 'Average number of bikes rent per hour'
               )
 
-fig.add_hline(y=0, line_color='white') 
-fig.add_vline(x=datetime.date(chosen_year, dico_month_indx[chosen_month], 1), 
+fig1.add_hline(y=0, line_color='white') 
+fig1.add_vline(x=datetime.date(chosen_year, dico_month_indx[chosen_month], 1), 
               line_color='red')      
 
-fig.update_traces(hovertemplate = '%{customdata[1]} <br> Bikes rent: %{customdata[0]}')
+fig1.update_traces(hovertemplate = '%{customdata[1]} <br> Bikes rent: %{customdata[0]}')
 
-fig.update_layout(
+fig1.update_layout(
     yaxis=dict(
         title_text = "Number of bikes rent",
         tickmode='array',
@@ -98,22 +110,22 @@ fig.update_layout(
 )
 
 
-# st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig1, use_container_width=True)
 
-selected_points = plotly_events(fig, click_event=True, hover_event=False, select_event=False)
+# selected_points = plotly_events(fig1, click_event=True, hover_event=False, select_event=False)
 
-date = ''
-for element in selected_points:
-    date = element["x"]
+# date = ''
+# for element in selected_points:
+#     date = element["x"]
 
-try :
-    year = int(date[:4])
-    month = int(date[5:7])
-except:
-    year = 2011
-    month = 1
+# try :
+#     year = int(date[:4])
+#     month = int(date[5:7])
+# except:
+#     year = 2011
+#     month = 1
 
-df_year_month = df[(df.year==year) & (df.month==month)]
+# df_year_month = df[(df.year==year) & (df.month==month)]
 
 
 
@@ -179,6 +191,8 @@ df_year_month = df[(df.year==year) & (df.month==month)]
 #############################
 
 st.write("## Average bike rental in the selected month")
+
+st.write(f'Great, let\'s understand the bike rental in {chosen_month} {chosen_year}. First, you can eather see, on average, how much bikes have been rent in {chosen_month} {chosen_year} per hour. But you can also play with the day type and whether in order to understand their impact!')
 
 def filter_dataset(month = None,
                    year = None,
@@ -274,7 +288,7 @@ if chosen_display[0] == 'Y' :
     st.text("")
 
     st.write('### Select the weather')
-    st.write('The default values of the slider are the most frequent weather in the selected month.')
+    st.write(f'The default range values of the slider are the first and third quantile of the weather in {chosen_month} {chosen_year}.')
     col1, col2, col3, col4 = st.columns(4)
     with col1 :
         chosen_weather = dico_weather_[st.select_slider('Weather',
@@ -349,43 +363,72 @@ if len(df_filtered) == 0:
 
 complementary_information = ' with set weather and day type' if chosen_display[0] == 'Y' else ''
 
+df_filtered_and_preprocessed = df_preprocessed(df_filtered)
+df_filtered_and_preprocessed['round_number'] = df_filtered_and_preprocessed.number.astype(int)
 
-base_2 = alt.Chart(df_preprocessed(df_filtered)
-                    .assign(round_number = lambda x : x['number'].astype(int))
-                    .drop(columns=['number']))
+fig2 = px.line(df_filtered_and_preprocessed, 
+              x="hour", 
+              y="number", 
+              color='client_type',
+              custom_data = ['round_number'],
+              title = "Average number of bikes rent hourly in "+chosen_month+' '+str(chosen_year)+complementary_information,
+              height=600)
 
-graph_2 = base_2.mark_line(point = False).encode(
-                x = alt.X("hour:O", title="Hour of day"),
-                y = alt.Y("round_number:Q", title="Number of bikes rent", scale = alt.Scale(domain=[0,650])),
-                color = alt.Color("client_type:N",title='Client Type'),
-                tooltip = alt.Tooltip("round_number:Q", title="Number of bikes rent")
-            ).properties(
-                title="Average number of bikes rent hourly in "+chosen_month+' '+str(chosen_year)+complementary_information,
-                width=700,
-                height=600,
-            )
+fig2.update_traces(hovertemplate = 'At %{x}h, %{customdata[0]} bikes rent')
 
-hover = alt.selection_single(
-        fields=["round_number"],
-        nearest=True,
-        on="mouseover",
-        empty="none",
-    )
+fig2.update_layout(
+    yaxis=dict(
+        title_text = "Number of bikes rent",
+    ),
+    xaxis = dict(
+        title_text = "Hour of day"
+    ),
+    legend_title_text = 'Client type',
+)
 
-tooltips = (base_2
-            .mark_rule()
-            .encode(
-                x = alt.X("hour:O", title="Hour of day"),
-                y = alt.Y("round_number:Q",title="Number of bikes rent"),
-                opacity=alt.condition(hover, alt.value(0.1), alt.value(0)),
-                tooltip=[
-                    alt.Tooltip("round_number:Q", title="Number of bikes rent"),
-                    alt.Tooltip("client_type:N",title='Client Type'),
-                ],
-            )
-            .add_selection(hover))
+fig2.update_yaxes(range=[-200, 650])
+# st.plotly_chart(fig2, use_container_width=True)
 
-st.altair_chart(graph_2+tooltips,use_container_width=True)
+selected_points = plotly_events(fig2, click_event=True, hover_event=False, select_event=False)
+
+
+# base_2 = alt.Chart(df_preprocessed(df_filtered)
+#                     .assign(round_number = lambda x : x['number'].astype(int))
+#                     .drop(columns=['number']))
+
+# graph_2 = base_2.mark_line(point = False).encode(
+#                 x = alt.X("hour:O", title="Hour of day"),
+#                 y = alt.Y("round_number:Q", title="Number of bikes rent", scale = alt.Scale(domain=[0,650])),
+#                 color = alt.Color("client_type:N",title='Client Type'),
+#                 tooltip = alt.Tooltip("round_number:Q", title="Number of bikes rent")
+#             ).properties(
+#                 title="Average number of bikes rent hourly in "+chosen_month+' '+str(chosen_year)+complementary_information,
+#                 width=700,
+#                 height=600,
+#             )
+
+# hover = alt.selection_single(
+#         fields=["round_number"],
+#         nearest=True,
+#         on="mouseover",
+#         empty="none",
+#     )
+
+# tooltips = (base_2
+#             .mark_rule()
+#             .encode(
+#                 x = alt.X("hour:O", title="Hour of day"),
+#                 y = alt.Y("round_number:Q",title="Number of bikes rent"),
+#                 opacity=alt.condition(hover, alt.value(0.1), alt.value(0)),
+#                 tooltip=[
+#                     alt.Tooltip("round_number:Q", title="Number of bikes rent"),
+#                     alt.Tooltip("client_type:N",title='Client Type'),
+#                 ],
+#             )
+#             .add_selection(hover))
+
+# st.altair_chart(graph_2+tooltips,use_container_width=True)
+
 
 
 #################
@@ -399,7 +442,7 @@ file.close()
 
 conditions = ' and under those conditions!' if chosen_display[0] == 'Y' else '.'
 total_bikes_per_hour = int(df_filtered['count'].sum() / len(df_filtered))
-st.write(f'There is an average of {total_bikes_per_hour} bikes rent at this station per hour over this month'+conditions)
+st.write(f'There is an average of {total_bikes_per_hour} bikes rent at this station per hour in {chosen_month} {chosen_year}'+conditions)
 nb_bikes_to_display = min(total_bikes_per_hour // 70 + 1 , 4)
 
 st.write('The more people rent bikes, the more bikers are displayed!')
@@ -435,6 +478,103 @@ with col4:
         )
 
 ####################################
+
+st.write('## Repartition of the bike rental on the selected hour')
+
+if selected_points == []:
+    st.write('You haven\'t selected any hour. Please click on the preceding graph to select an hour!')
+else :
+    for element in selected_points :
+        hour = int(element["x"])
+        break
+    st.write(f'Let\'s see the repartiton of the bike rentals at {hour}h on the different days of the week.')
+
+    df_hour = df[df.hour==hour][['weekday','casual','registered']]
+    
+    fig3 = go.Figure()
+
+    fig3.add_trace(go.Violin(x=df_hour['weekday'],
+                            y=df_hour['registered'],
+                            legendgroup='Registered', 
+                            scalegroup='Registered', 
+                            name='Registered',
+                            side='positive',
+                            line_color='orange')
+                )
+
+    fig3.add_trace(go.Violin(x=df_hour['weekday'],
+                            y=df_hour['casual'],
+                            legendgroup='Casual', 
+                            scalegroup='Casual', 
+                            name='Casual',
+                            side='negative',
+                            line_color='blue')
+                )
+
+
+    fig3.update_traces(meanline_visible=True)
+    fig3.update_layout(title=f"Repartition of bike rental at {hour}h",
+                        xaxis_title="Days of week",
+                        yaxis_title="Number of bikes rents",
+                            violingap=0, 
+                      violinmode='overlay')
+    
+    st.plotly_chart(fig3,use_container_width=True)
+
+
+# import altair as alt
+# from vega_datasets import data
+
+# source = data.seattle_weather.url
+
+# step = 20
+# overlap = 1
+
+# chart = alt.Chart(source, height=step).transform_timeunit(
+#     Month='month(date)'
+# ).transform_joinaggregate(
+#     mean_temp='mean(temp_max)', groupby=['Month']
+# ).transform_bin(
+#     ['bin_max', 'bin_min'], 'temp_max'
+# ).transform_aggregate(
+#     value='count()', groupby=['Month', 'mean_temp', 'bin_min', 'bin_max']
+# ).transform_impute(
+#     impute='value', groupby=['Month', 'mean_temp'], key='bin_min', value=0
+# ).mark_area(
+#     interpolate='monotone',
+#     fillOpacity=0.8,
+#     stroke='lightgray',
+#     strokeWidth=0.5
+# ).encode(
+#     alt.X('bin_min:Q', bin='binned', title='Maximum Daily Temperature (C)'),
+#     alt.Y(
+#         'value:Q',
+#         scale=alt.Scale(range=[step, -step * overlap]),
+#         axis=None
+#     ),
+#     alt.Fill(
+#         'mean_temp:Q',
+#         legend=None,
+#         scale=alt.Scale(domain=[30, 5], scheme='redyellowblue')
+#     )
+# ).facet(
+#     row=alt.Row(
+#         'Month:T',
+#         title=None,
+#         header=alt.Header(labelAngle=0, labelAlign='right', format='%B')
+#     )
+# ).properties(
+#     title='Seattle Weather',
+#     bounds='flush'
+# ).configure_facet(
+#     spacing=0
+# ).configure_view(
+#     stroke=None
+# ).configure_title(
+#     anchor='end'
+# )
+
+# st.altair_chart(chart,use_container_width=True)
 
 # import altair as alt
 # import pandas as pd
