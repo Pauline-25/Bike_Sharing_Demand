@@ -106,9 +106,13 @@ fig1.update_layout(
         title_text = "Number of bikes rent",
         tickmode='array',
         tickvals=[-50, 0, 50, 100, 150, 200, 250],
-        ticktext=[ 50, 0, 50, 100, 150, 200, 250]
+        ticktext=[ 50, 0, 50, 100, 150, 200, 250],
+        showgrid=False
     ),
-    xaxis = dict(title_text = "Month and year"),
+    xaxis = dict(
+        title_text = "Month and year",
+        showgrid=False
+        ),
     legend_title_text = 'Client type',
 )
 
@@ -246,7 +250,7 @@ if chosen_display[0] == 'Y' :
                                     )
 
     with col4 : 
-        windspeed_down, windspeed_up = st.slider(label='Windspeed',
+        windspeed_down, windspeed_up = st.slider(label='Wind speed',
                                     min_value=int(df.windspeed.min()),
                                     max_value=int(df.windspeed.max()),
                                     value=(int(q1_windspeed), int(q3_windspeed)),
@@ -311,8 +315,14 @@ fig2 = px.line(df_filtered_and_preprocessed,
 fig2.update_traces(hovertemplate = 'At %{x}h, %{customdata[0]} bikes rent')
 
 fig2.update_layout(
-    yaxis=dict(title_text = "Number of bikes rent"),
-    xaxis = dict(title_text = "Hour of day"),
+    yaxis=dict(
+        title_text = "Number of bikes rent",
+        showgrid=False
+        ),
+    xaxis = dict(
+        title_text = "Hour of day",
+        showgrid=False
+        ),
     legend_title_text = 'Client type',
 )
 
